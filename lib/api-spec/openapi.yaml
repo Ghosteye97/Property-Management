@@ -1,22 +1,37 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Property Management API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: complexes
+    description: Complex / property management
+  - name: units
+    description: Unit management
+  - name: owners
+    description: Owner management
+  - name: billing
+    description: Billing and finance
+  - name: maintenance
+    description: Maintenance requests
+  - name: communications
+    description: Communications and newsletters
+  - name: documents
+    description: Document management
+  - name: reports
+    description: Reports and dashboards
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +39,528 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /complexes:
+    get:
+      operationId: listComplexes
+      tags: [complexes]
+      summary: List all complexes
+      responses:
+        "200":
+          description: List of complexes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Complex"
+    post:
+      operationId: createComplex
+      tags: [complexes]
+      summary: Create a new complex
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateComplexInput"
+      responses:
+        "201":
+          description: Created complex
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Complex"
+
+  /complexes/{complexId}:
+    get:
+      operationId: getComplex
+      tags: [complexes]
+      summary: Get a complex by ID
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Complex
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Complex"
+    put:
+      operationId: updateComplex
+      tags: [complexes]
+      summary: Update a complex
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateComplexInput"
+      responses:
+        "200":
+          description: Updated complex
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Complex"
+    delete:
+      operationId: deleteComplex
+      tags: [complexes]
+      summary: Delete a complex
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /complexes/{complexId}/stats:
+    get:
+      operationId: getComplexStats
+      tags: [complexes]
+      summary: Get summary stats for a complex
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Complex stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplexStats"
+
+  /complexes/{complexId}/units:
+    get:
+      operationId: listUnits
+      tags: [units]
+      summary: List units for a complex
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of units
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Unit"
+    post:
+      operationId: createUnit
+      tags: [units]
+      summary: Create a unit
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUnitInput"
+      responses:
+        "201":
+          description: Created unit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Unit"
+
+  /complexes/{complexId}/units/{unitId}:
+    get:
+      operationId: getUnit
+      tags: [units]
+      summary: Get a unit
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: unitId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Unit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Unit"
+    put:
+      operationId: updateUnit
+      tags: [units]
+      summary: Update a unit
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: unitId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUnitInput"
+      responses:
+        "200":
+          description: Updated unit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Unit"
+
+  /complexes/{complexId}/invoices:
+    get:
+      operationId: listInvoices
+      tags: [billing]
+      summary: List invoices for a complex
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invoice"
+    post:
+      operationId: createInvoice
+      tags: [billing]
+      summary: Create an invoice
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInvoiceInput"
+      responses:
+        "201":
+          description: Created invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+
+  /complexes/{complexId}/invoices/{invoiceId}:
+    put:
+      operationId: updateInvoice
+      tags: [billing]
+      summary: Update an invoice (e.g. mark paid)
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateInvoiceInput"
+      responses:
+        "200":
+          description: Updated invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+
+  /complexes/{complexId}/billing/bulk-run:
+    post:
+      operationId: bulkBillingRun
+      tags: [billing]
+      summary: Run bulk levy billing for all units
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkBillingInput"
+      responses:
+        "200":
+          description: Bulk billing result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkBillingResult"
+
+  /complexes/{complexId}/maintenance:
+    get:
+      operationId: listMaintenanceRequests
+      tags: [maintenance]
+      summary: List maintenance requests for a complex
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of maintenance requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MaintenanceRequest"
+    post:
+      operationId: createMaintenanceRequest
+      tags: [maintenance]
+      summary: Create a maintenance request
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMaintenanceInput"
+      responses:
+        "201":
+          description: Created maintenance request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequest"
+
+  /complexes/{complexId}/maintenance/{requestId}:
+    put:
+      operationId: updateMaintenanceRequest
+      tags: [maintenance]
+      summary: Update a maintenance request
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMaintenanceInput"
+      responses:
+        "200":
+          description: Updated maintenance request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequest"
+
+  /complexes/{complexId}/communications:
+    get:
+      operationId: listCommunications
+      tags: [communications]
+      summary: List communications for a complex
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of communications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Communication"
+    post:
+      operationId: createCommunication
+      tags: [communications]
+      summary: Create/send a communication
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommunicationInput"
+      responses:
+        "201":
+          description: Created communication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Communication"
+
+  /complexes/{complexId}/documents:
+    get:
+      operationId: listDocuments
+      tags: [documents]
+      summary: List documents for a complex
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+    post:
+      operationId: createDocument
+      tags: [documents]
+      summary: Add a document record
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDocumentInput"
+      responses:
+        "201":
+          description: Created document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+
+  /complexes/{complexId}/documents/{documentId}:
+    delete:
+      operationId: deleteDocument
+      tags: [documents]
+      summary: Delete a document
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /complexes/{complexId}/reports/financial:
+    get:
+      operationId: getFinancialReport
+      tags: [reports]
+      summary: Get financial report for a complex
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Financial report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialReport"
+
+  /complexes/{complexId}/reports/occupancy:
+    get:
+      operationId: getOccupancyReport
+      tags: [reports]
+      summary: Get occupancy report for a complex
+      parameters:
+        - name: complexId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Occupancy report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OccupancyReport"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +568,435 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    Complex:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [Sectional Title, HOA, Residential, Commercial, Other]
+        registrationNumber:
+          type: string
+        address:
+          type: string
+        numberOfUnits:
+          type: integer
+        agentName:
+          type: string
+        agentEmail:
+          type: string
+        agentPhone:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, type, address, numberOfUnits, createdAt]
+
+    CreateComplexInput:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [Sectional Title, HOA, Residential, Commercial, Other]
+        registrationNumber:
+          type: string
+        address:
+          type: string
+        numberOfUnits:
+          type: integer
+        agentName:
+          type: string
+        agentEmail:
+          type: string
+        agentPhone:
+          type: string
+      required: [name, type, address, numberOfUnits]
+
+    ComplexStats:
+      type: object
+      properties:
+        totalUnits:
+          type: integer
+        occupiedUnits:
+          type: integer
+        vacantUnits:
+          type: integer
+        outstandingBalance:
+          type: number
+        openMaintenanceRequests:
+          type: integer
+        totalRevenue:
+          type: number
+        collectionRate:
+          type: number
+      required: [totalUnits, occupiedUnits, vacantUnits, outstandingBalance, openMaintenanceRequests, totalRevenue, collectionRate]
+
+    Unit:
+      type: object
+      properties:
+        id:
+          type: integer
+        complexId:
+          type: integer
+        unitNumber:
+          type: string
+        floor:
+          type: string
+        size:
+          type: number
+        status:
+          type: string
+          enum: [Occupied, Vacant, Under Maintenance]
+        ownerName:
+          type: string
+        ownerEmail:
+          type: string
+        ownerPhone:
+          type: string
+        tenantName:
+          type: string
+        tenantEmail:
+          type: string
+        tenantPhone:
+          type: string
+        monthlyLevy:
+          type: number
+        outstandingBalance:
+          type: number
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, complexId, unitNumber, status, createdAt]
+
+    CreateUnitInput:
+      type: object
+      properties:
+        unitNumber:
+          type: string
+        floor:
+          type: string
+        size:
+          type: number
+        status:
+          type: string
+          enum: [Occupied, Vacant, Under Maintenance]
+        ownerName:
+          type: string
+        ownerEmail:
+          type: string
+        ownerPhone:
+          type: string
+        tenantName:
+          type: string
+        tenantEmail:
+          type: string
+        tenantPhone:
+          type: string
+        monthlyLevy:
+          type: number
+        notes:
+          type: string
+      required: [unitNumber, status]
+
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: integer
+        complexId:
+          type: integer
+        unitId:
+          type: integer
+        unitNumber:
+          type: string
+        ownerName:
+          type: string
+        type:
+          type: string
+          enum: [Levy, Special Assessment, Fine, Other]
+        amount:
+          type: number
+        status:
+          type: string
+          enum: [Pending, Paid, Overdue, Cancelled]
+        dueDate:
+          type: string
+          format: date-time
+        paidDate:
+          type: string
+          format: date-time
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, complexId, unitId, type, amount, status, dueDate, createdAt]
+
+    CreateInvoiceInput:
+      type: object
+      properties:
+        unitId:
+          type: integer
+        type:
+          type: string
+          enum: [Levy, Special Assessment, Fine, Other]
+        amount:
+          type: number
+        dueDate:
+          type: string
+          format: date-time
+        description:
+          type: string
+      required: [unitId, type, amount, dueDate]
+
+    UpdateInvoiceInput:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [Pending, Paid, Overdue, Cancelled]
+        paidDate:
+          type: string
+          format: date-time
+      required: [status]
+
+    BulkBillingInput:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [Levy, Special Assessment, Fine, Other]
+        amount:
+          type: number
+        dueDate:
+          type: string
+          format: date-time
+        description:
+          type: string
+      required: [type, amount, dueDate]
+
+    BulkBillingResult:
+      type: object
+      properties:
+        invoicesCreated:
+          type: integer
+        totalAmount:
+          type: number
+      required: [invoicesCreated, totalAmount]
+
+    MaintenanceRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        complexId:
+          type: integer
+        unitId:
+          type: integer
+        unitNumber:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [Plumbing, Electrical, Structural, Cleaning, Security, Landscaping, Other]
+        priority:
+          type: string
+          enum: [Low, Medium, High, Urgent]
+        status:
+          type: string
+          enum: [Open, In Progress, Completed, Cancelled]
+        assignedTo:
+          type: string
+        resolvedAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, complexId, unitId, title, category, priority, status, createdAt]
+
+    CreateMaintenanceInput:
+      type: object
+      properties:
+        unitId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [Plumbing, Electrical, Structural, Cleaning, Security, Landscaping, Other]
+        priority:
+          type: string
+          enum: [Low, Medium, High, Urgent]
+        assignedTo:
+          type: string
+      required: [unitId, title, category, priority]
+
+    UpdateMaintenanceInput:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [Open, In Progress, Completed, Cancelled]
+        assignedTo:
+          type: string
+        notes:
+          type: string
+        resolvedAt:
+          type: string
+          format: date-time
+      required: [status]
+
+    Communication:
+      type: object
+      properties:
+        id:
+          type: integer
+        complexId:
+          type: integer
+        subject:
+          type: string
+        body:
+          type: string
+        type:
+          type: string
+          enum: [Newsletter, Notice, Reminder, Emergency, Other]
+        sentTo:
+          type: string
+          enum: [All Units, Selected Units]
+        recipientCount:
+          type: integer
+        sentAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, complexId, subject, body, type, sentTo, createdAt]
+
+    CreateCommunicationInput:
+      type: object
+      properties:
+        subject:
+          type: string
+        body:
+          type: string
+        type:
+          type: string
+          enum: [Newsletter, Notice, Reminder, Emergency, Other]
+        sentTo:
+          type: string
+          enum: [All Units, Selected Units]
+        unitIds:
+          type: array
+          items:
+            type: integer
+      required: [subject, body, type, sentTo]
+
+    Document:
+      type: object
+      properties:
+        id:
+          type: integer
+        complexId:
+          type: integer
+        unitId:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+          enum: [Compliance, Contract, Financial, Rules, Insurance, Other]
+        fileUrl:
+          type: string
+        fileSize:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+      required: [id, complexId, name, category, uploadedAt]
+
+    CreateDocumentInput:
+      type: object
+      properties:
+        unitId:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+          enum: [Compliance, Contract, Financial, Rules, Insurance, Other]
+        fileUrl:
+          type: string
+        fileSize:
+          type: string
+      required: [name, category]
+
+    FinancialReport:
+      type: object
+      properties:
+        complexId:
+          type: integer
+        totalInvoiced:
+          type: number
+        totalCollected:
+          type: number
+        totalOutstanding:
+          type: number
+        collectionRate:
+          type: number
+        invoicesByStatus:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+        monthlyRevenue:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+      required: [complexId, totalInvoiced, totalCollected, totalOutstanding, collectionRate, invoicesByStatus, monthlyRevenue]
+
+    OccupancyReport:
+      type: object
+      properties:
+        complexId:
+          type: integer
+        totalUnits:
+          type: integer
+        occupiedUnits:
+          type: integer
+        vacantUnits:
+          type: integer
+        underMaintenanceUnits:
+          type: integer
+        occupancyRate:
+          type: number
+        unitsByStatus:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+      required: [complexId, totalUnits, occupiedUnits, vacantUnits, underMaintenanceUnits, occupancyRate, unitsByStatus]
+
+    ChartDataPoint:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: number
+      required: [name, value]
