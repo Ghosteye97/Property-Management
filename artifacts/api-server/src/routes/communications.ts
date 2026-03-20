@@ -28,6 +28,12 @@ router.post("/", async (req, res) => {
   if (body.sentTo === "All Units") {
     const units = await db.select().from(unitsTable).where(eq(unitsTable.complexId, complexId));
     recipientCount = units.length;
+  } else if (body.sentTo === "All Owners") {
+    const units = await db.select().from(unitsTable).where(eq(unitsTable.complexId, complexId));
+    recipientCount = units.filter((unit) => Boolean(unit.ownerName || unit.ownerEmail)).length;
+  } else if (body.sentTo === "Trustees") {
+    const units = await db.select().from(unitsTable).where(eq(unitsTable.complexId, complexId));
+    recipientCount = units.filter((unit) => unit.isTrustee).length;
   } else if (body.unitIds && body.unitIds.length > 0) {
     recipientCount = body.unitIds.length;
   }

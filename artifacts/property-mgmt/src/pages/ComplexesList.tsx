@@ -10,20 +10,28 @@ import { Building2, Plus, ArrowRight, MapPin, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export function ComplexesList() {
-  const { data: complexes, isLoading } = useListComplexes();
+  const { data, isLoading } = useListComplexes();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  // ✅ Normalize data safely
+  const complexes = Array.isArray(data)
+    ? data
+    : Array.isArray((data as any)?.data)
+    ? (data as any).data
+    : [];
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-background">
       {/* Hero Header */}
       <div className="bg-primary pt-20 pb-32 px-6 relative overflow-hidden">
-        {/* Abstract pattern */}
         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="text-primary-foreground">
               <h1 className="text-4xl md:text-5xl font-display font-extrabold tracking-tight mb-3">Portfolio Overview</h1>
-              <p className="text-primary-foreground/80 text-lg max-w-xl">Manage all your residential and commercial properties from a single, unified command center.</p>
+              <p className="text-primary-foreground/80 text-lg max-w-xl">
+                Manage all your residential and commercial properties from a single, unified command center.
+              </p>
             </div>
             
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -48,20 +56,29 @@ export function ComplexesList() {
       <div className="max-w-7xl mx-auto px-6 -mt-20 relative z-20 pb-20">
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1,2,3].map(i => <div key={i} className="bg-card h-64 rounded-2xl animate-pulse shadow-sm" />)}
+            {[1,2,3].map(i => (
+              <div key={i} className="bg-card h-64 rounded-2xl animate-pulse shadow-sm" />
+            ))}
           </div>
-        ) : complexes?.length === 0 ? (
+        ) : complexes.length === 0 ? (
           <div className="bg-card rounded-2xl shadow-xl border border-border p-16 text-center max-w-2xl mx-auto">
             <Building2 className="w-20 h-20 text-muted-foreground/30 mx-auto mb-6" />
-            <h3 className="text-2xl font-display font-bold text-foreground mb-2">No properties yet</h3>
-            <p className="text-muted-foreground mb-8">Get started by creating your first residential complex or HOA.</p>
-            <button onClick={() => setIsCreateOpen(true)} className="bg-primary text-primary-foreground px-8 py-3 rounded-xl font-semibold shadow-md inline-flex items-center gap-2">
+            <h3 className="text-2xl font-display font-bold text-foreground mb-2">
+              No properties yet
+            </h3>
+            <p className="text-muted-foreground mb-8">
+              Get started by creating your first residential complex or HOA.
+            </p>
+            <button 
+              onClick={() => setIsCreateOpen(true)} 
+              className="bg-primary text-primary-foreground px-8 py-3 rounded-xl font-semibold shadow-md inline-flex items-center gap-2"
+            >
               <Plus className="w-5 h-5" /> Add Property
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {complexes?.map(complex => (
+            {complexes.map((complex: any) => (
               <Link 
                 key={complex.id}
                 href={`/complexes/${complex.id}`}
@@ -77,7 +94,9 @@ export function ComplexesList() {
                     </span>
                   </div>
                   
-                  <h3 className="text-xl font-bold font-display text-foreground mb-2 group-hover:text-primary transition-colors">{complex.name}</h3>
+                  <h3 className="text-xl font-bold font-display text-foreground mb-2 group-hover:text-primary transition-colors">
+                    {complex.name}
+                  </h3>
                   
                   <div className="space-y-2 mb-6">
                     <div className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -111,6 +130,7 @@ function CreateComplexForm({ onSuccess }: { onSuccess: () => void }) {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+
     createMutation.mutate({
       data: {
         name: formData.get("name") as string,

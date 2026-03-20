@@ -7,7 +7,7 @@ import {
   getListMaintenanceRequestsQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Wrench, Plus, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { Wrench, Plus, AlertTriangle, CheckCircle2, Clock, Mail, FileText, UserRound } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { format } from "date-fns";
 
@@ -15,6 +15,7 @@ export function Maintenance({ complexId }: { complexId: number }) {
   const { data: requests, isLoading } = useListMaintenanceRequests(complexId);
   const { data: units } = useListUnits(complexId);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const updateMutation = useUpdateMaintenanceRequest();
   const queryClient = useQueryClient();
 
@@ -31,6 +32,12 @@ export function Maintenance({ complexId }: { complexId: number }) {
       case 'High': return 'bg-orange-100 text-orange-700 border-orange-200';
       case 'Medium': return 'bg-blue-100 text-blue-700 border-blue-200';
       default: return 'bg-slate-100 text-slate-700 border-slate-200';
+    }
+  };
+
+  const handleRequestDialogChange = (open: boolean) => {
+    if (!open) {
+      setSelectedRequest(null);
     }
   };
 
@@ -83,7 +90,12 @@ export function Maintenance({ complexId }: { complexId: number }) {
                 )}
                 
                 {colRequests.map(req => (
-                  <div key={req.id} className="bg-card rounded-xl p-4 shadow-sm border border-border hover:shadow-md transition-all group">
+                  <button
+                    key={req.id}
+                    type="button"
+                    onClick={() => setSelectedRequest(req)}
+                    className="group w-full rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5"
+                  >
                     <div className="flex justify-between items-start mb-2">
                       <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${getPriorityColor(req.priority)}`}>
                         {req.priority}
@@ -98,22 +110,57 @@ export function Maintenance({ complexId }: { complexId: number }) {
                         <Wrench className="w-3 h-3" /> {req.category}
                       </span>
                       
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                      <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                         {status === 'Open' && (
-                          <button onClick={() => handleStatusChange(req.id, 'In Progress')} className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-2 py-1 rounded border border-blue-200">Start</button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleStatusChange(req.id, 'In Progress');
+                            }}
+                            className="rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-600 hover:bg-blue-100"
+                          >
+                            Start
+                          </button>
                         )}
                         {status === 'In Progress' && (
-                          <button onClick={() => handleStatusChange(req.id, 'Completed')} className="text-xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-2 py-1 rounded border border-emerald-200">Done</button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleStatusChange(req.id, 'Completed');
+                            }}
+                            className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-600 hover:bg-emerald-100"
+                          >
+                            Done
+                          </button>
                         )}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
           );
         })}
       </div>
+
+      <Dialog open={Boolean(selectedRequest)} onOpenChange={handleRequestDialogChange}>
+        <DialogContent className="sm:max-w-[720px]">
+          {selectedRequest ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Maintenance Request Details</DialogTitle>
+              </DialogHeader>
+              <MaintenanceRequestDetails
+                complexId={complexId}
+                request={selectedRequest}
+                onSaved={() => setSelectedRequest(null)}
+              />
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -198,5 +245,195 @@ function MaintenanceForm({ complexId, units, onSuccess }: { complexId: number, u
         </button>
       </div>
     </form>
+  );
+}
+
+function MaintenanceRequestDetails({
+  complexId,
+  request,
+  onSaved,
+}: {
+  complexId: number;
+  request: any;
+  onSaved: () => void;
+}) {
+  const updateMutation = useUpdateMaintenanceRequest();
+  const queryClient = useQueryClient();
+  const [contractorEmail, setContractorEmail] = useState("");
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+
+    updateMutation.mutate(
+      {
+        complexId,
+        requestId: request.id,
+        data: {
+          status: formData.get("status") as any,
+          assignedTo: String(formData.get("assignedTo") ?? "").trim() || undefined,
+          notes: String(formData.get("notes") ?? "").trim() || undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({
+            queryKey: getListMaintenanceRequestsQueryKey(complexId),
+          });
+          onSaved();
+        },
+      },
+    );
+  };
+
+  const contractorName = request.assignedTo || "Contractor";
+  const emailSubject = encodeURIComponent(
+    `Maintenance Request: ${request.title} (Unit ${request.unitNumber ?? "-"})`,
+  );
+  const emailBody = encodeURIComponent(
+    [
+      `Complex request #${request.id}`,
+      `Unit: ${request.unitNumber ?? "-"}`,
+      `Category: ${request.category}`,
+      `Priority: ${request.priority}`,
+      `Status: ${request.status}`,
+      "",
+      "Issue description:",
+      request.description || "No description provided.",
+      "",
+      "Internal notes:",
+      request.notes || "No internal notes yet.",
+    ].join("\n"),
+  );
+  const contractorMailto = contractorEmail.trim()
+    ? `mailto:${contractorEmail.trim()}?subject=${emailSubject}&body=${emailBody}`
+    : "";
+
+  return (
+    <div className="space-y-6 pt-2">
+      <div className="grid gap-4 rounded-2xl border border-border bg-muted/20 p-5 md:grid-cols-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Request Summary
+          </p>
+          <h3 className="mt-2 text-xl font-display font-bold text-foreground">
+            {request.title}
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            {request.description || "No description provided yet."}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <InfoPill label="Unit" value={`Unit ${request.unitNumber ?? "-"}`} />
+          <InfoPill label="Category" value={request.category} />
+          <InfoPill label="Priority" value={request.priority} />
+          <InfoPill label="Opened" value={format(new Date(request.createdAt), "MMM d, yyyy")} />
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Status</label>
+            <select
+              name="status"
+              defaultValue={request.status}
+              className="w-full rounded-xl border border-border bg-background p-3"
+            >
+              <option value="Open">Open</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Assigned Contractor / Vendor</label>
+            <div className="relative">
+              <UserRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                name="assignedTo"
+                defaultValue={request.assignedTo}
+                className="w-full rounded-xl border border-border bg-background py-3 pl-10 pr-3"
+                placeholder="e.g. Apex Plumbing"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Contractor Email</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="email"
+                value={contractorEmail}
+                onChange={(event) => setContractorEmail(event.target.value)}
+                className="w-full rounded-xl border border-border bg-background py-3 pl-10 pr-3"
+                placeholder="contractor@example.com"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Used to compose an email to the contractor from this request detail view.
+            </p>
+          </div>
+
+          <div className="flex items-end">
+            <a
+              href={contractorMailto || undefined}
+              onClick={(event) => {
+                if (!contractorMailto) {
+                  event.preventDefault();
+                }
+              }}
+              className={`inline-flex h-12 items-center justify-center rounded-xl px-4 text-sm font-medium transition-all ${
+                contractorMailto
+                  ? "bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80"
+                  : "cursor-not-allowed border border-border bg-muted text-muted-foreground"
+              }`}
+            >
+              Email Contractor
+            </a>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Internal Notes</label>
+          <div className="relative">
+            <FileText className="absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
+            <textarea
+              name="notes"
+              defaultValue={request.notes}
+              rows={6}
+              className="w-full rounded-xl border border-border bg-background py-3 pl-10 pr-3"
+              placeholder="Capture contractor updates, access instructions, follow-ups, resident communication, and completion notes."
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <button
+            type="submit"
+            disabled={updateMutation.isPending}
+            className="rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow transition-all hover:shadow-lg disabled:opacity-50"
+          >
+            {updateMutation.isPending ? "Saving..." : "Save Details"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function InfoPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-background px-4 py-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-medium text-foreground">{value}</p>
+    </div>
   );
 }

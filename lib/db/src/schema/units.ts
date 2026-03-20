@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, real, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { complexesTable } from "./complexes";
@@ -16,6 +16,10 @@ export const unitsTable = pgTable("units", {
   tenantName: text("tenant_name"),
   tenantEmail: text("tenant_email"),
   tenantPhone: text("tenant_phone"),
+  isTrustee: boolean("is_trustee").notNull().default(false),
+  trusteeRole: text("trustee_role"),
+  trusteeStartDate: text("trustee_start_date"),
+  trusteeNotes: text("trustee_notes"),
   monthlyLevy: real("monthly_levy"),
   outstandingBalance: real("outstanding_balance").default(0),
   notes: text("notes"),

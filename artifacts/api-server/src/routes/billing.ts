@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { invoicesTable, unitsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import {
   ListInvoicesParams,
   CreateInvoiceParams,
@@ -13,6 +13,47 @@ import {
 } from "@workspace/api-zod";
 
 const router = Router({ mergeParams: true });
+
+function toOptionalDate(value: unknown) {
+  if (value == null || value === "") {
+    return undefined;
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  return new Date(String(value));
+}
+
+async function syncUnitOutstandingBalance(
+  executor: Pick<typeof db, "select" | "update">,
+  unitId: number,
+) {
+  const [balanceRow] = await executor
+    .select({
+      outstandingBalance: sql<number>`
+        coalesce(
+          sum(
+            case
+              when ${invoicesTable.status} = 'Paid' then 0
+              else ${invoicesTable.amount}
+            end
+          ),
+          0
+        )
+      `,
+    })
+    .from(invoicesTable)
+    .where(eq(invoicesTable.unitId, unitId));
+
+  const outstandingBalance = Number(balanceRow?.outstandingBalance ?? 0);
+
+  await executor
+    .update(unitsTable)
+    .set({ outstandingBalance })
+    .where(eq(unitsTable.id, unitId));
+}
 
 router.get("/invoices", async (req, res) => {
   const { complexId } = ListInvoicesParams.parse(req.params);
@@ -35,55 +76,67 @@ router.get("/invoices", async (req, res) => {
     .leftJoin(unitsTable, eq(invoicesTable.unitId, unitsTable.id))
     .where(eq(invoicesTable.complexId, complexId))
     .orderBy(invoicesTable.createdAt);
-  res.json(invoices);
+  return res.json(invoices);
 });
 
 router.post("/invoices", async (req, res) => {
   const { complexId } = CreateInvoiceParams.parse(req.params);
-  const body = CreateInvoiceBody.parse(req.body);
-  const [invoice] = await db
-    .insert(invoicesTable)
-    .values({ ...body, complexId, dueDate: new Date(body.dueDate) })
-    .returning();
+  const body = CreateInvoiceBody.parse({
+    ...req.body,
+    dueDate: toOptionalDate(req.body?.dueDate),
+  });
+  const invoice = await db.transaction(async (tx) => {
+    const [createdInvoice] = await tx
+      .insert(invoicesTable)
+      .values({ ...body, complexId, dueDate: new Date(body.dueDate) })
+      .returning();
 
-  await db
-    .update(unitsTable)
-    .set({ outstandingBalance: db.$with("q").as(
-      db.select({ val: unitsTable.outstandingBalance }).from(unitsTable).where(eq(unitsTable.id, body.unitId))
-    ) as unknown as number })
-    .where(eq(unitsTable.id, body.unitId));
+    await syncUnitOutstandingBalance(tx, body.unitId);
 
-  res.status(201).json(invoice);
+    return createdInvoice;
+  });
+
+  return res.status(201).json(invoice);
 });
 
 router.put("/invoices/:invoiceId", async (req, res) => {
   const { complexId, invoiceId } = UpdateInvoiceParams.parse(req.params);
-  const body = UpdateInvoiceBody.parse(req.body);
+  const body = UpdateInvoiceBody.parse({
+    ...req.body,
+    paidDate: toOptionalDate(req.body?.paidDate),
+  });
   const updateData: Record<string, unknown> = { status: body.status };
   if (body.paidDate) updateData.paidDate = new Date(body.paidDate);
 
-  const [invoice] = await db
-    .update(invoicesTable)
-    .set(updateData)
-    .where(and(eq(invoicesTable.complexId, complexId), eq(invoicesTable.id, invoiceId)))
-    .returning();
+  const invoice = await db.transaction(async (tx) => {
+    const [updatedInvoice] = await tx
+      .update(invoicesTable)
+      .set(updateData)
+      .where(and(eq(invoicesTable.complexId, complexId), eq(invoicesTable.id, invoiceId)))
+      .returning();
 
-  if (!invoice) return res.status(404).json({ error: "Invoice not found" });
-
-  if (body.status === "Paid") {
-    const unit = await db.select().from(unitsTable).where(eq(unitsTable.id, invoice.unitId));
-    if (unit[0]) {
-      const newBalance = Math.max(0, (unit[0].outstandingBalance ?? 0) - invoice.amount);
-      await db.update(unitsTable).set({ outstandingBalance: newBalance }).where(eq(unitsTable.id, invoice.unitId));
+    if (!updatedInvoice) {
+      return null;
     }
+
+    await syncUnitOutstandingBalance(tx, updatedInvoice.unitId);
+
+    return updatedInvoice;
+  });
+
+  if (!invoice) {
+    return res.status(404).json({ error: "Invoice not found" });
   }
 
-  res.json(invoice);
+  return res.json(invoice);
 });
 
 router.post("/billing/bulk-run", async (req, res) => {
   const { complexId } = BulkBillingRunParams.parse(req.params);
-  const body = BulkBillingRunBody.parse(req.body);
+  const body = BulkBillingRunBody.parse({
+    ...req.body,
+    dueDate: toOptionalDate(req.body?.dueDate),
+  });
 
   const units = await db.select().from(unitsTable).where(eq(unitsTable.complexId, complexId));
 
@@ -104,7 +157,7 @@ router.post("/billing/bulk-run", async (req, res) => {
     await db.update(unitsTable).set({ outstandingBalance: newBalance }).where(eq(unitsTable.id, unit.id));
   }
 
-  res.json({
+  return res.json({
     invoicesCreated: invoicesToInsert.length,
     totalAmount: invoicesToInsert.length * body.amount,
   });

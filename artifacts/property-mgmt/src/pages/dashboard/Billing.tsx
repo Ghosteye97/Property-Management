@@ -12,6 +12,8 @@ import { Receipt, Plus, Search, CheckCircle, Clock, Copy } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { format } from "date-fns";
+import { useComplexCurrency } from "@/lib/complex-currency";
+import { getCurrencySymbol } from "@/lib/currency";
 
 export function Billing({ complexId }: { complexId: number }) {
   const { data: invoices, isLoading } = useListInvoices(complexId);
@@ -21,6 +23,7 @@ export function Billing({ complexId }: { complexId: number }) {
   const [filter, setFilter] = useState("All");
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const currencyCode = useComplexCurrency();
 
   const filteredInvoices = invoices?.filter(i => filter === "All" || i.status === filter) || [];
 
@@ -113,7 +116,7 @@ export function Billing({ complexId }: { complexId: number }) {
                       <div className="text-xs text-muted-foreground mt-0.5">Due {format(new Date(inv.dueDate), 'MMM d, yyyy')}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-bold">{formatCurrency(inv.amount)}</div>
+                      <div className="font-bold">{formatCurrency(inv.amount, currencyCode)}</div>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -151,6 +154,8 @@ export function Billing({ complexId }: { complexId: number }) {
 function BulkBillingForm({ complexId, onSuccess }: { complexId: number, onSuccess: () => void }) {
   const bulkRun = useBulkBillingRun();
   const queryClient = useQueryClient();
+  const currencyCode = useComplexCurrency();
+  const currencySymbol = getCurrencySymbol(currencyCode);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -184,7 +189,7 @@ function BulkBillingForm({ complexId, onSuccess }: { complexId: number, onSucces
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Amount per Unit ($)</label>
+        <label className="text-sm font-medium">Amount per Unit ({currencySymbol})</label>
         <input required type="number" step="0.01" name="amount" className="w-full p-2.5 border rounded-xl" />
       </div>
 
@@ -209,6 +214,8 @@ function BulkBillingForm({ complexId, onSuccess }: { complexId: number, onSucces
 function CreateInvoiceForm({ complexId, units, onSuccess }: { complexId: number, units: any[], onSuccess: () => void }) {
   const createInvoice = useCreateInvoice();
   const queryClient = useQueryClient();
+  const currencyCode = useComplexCurrency();
+  const currencySymbol = getCurrencySymbol(currencyCode);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -253,7 +260,7 @@ function CreateInvoiceForm({ complexId, units, onSuccess }: { complexId: number,
           </select>
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Amount ($)</label>
+          <label className="text-sm font-medium">Amount ({currencySymbol})</label>
           <input required type="number" step="0.01" name="amount" className="w-full p-2.5 border rounded-xl" />
         </div>
       </div>

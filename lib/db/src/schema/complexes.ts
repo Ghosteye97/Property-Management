@@ -6,6 +6,7 @@ export const complexesTable = pgTable("complexes", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   type: text("type").notNull(),
+  currencyCode: text("currency_code").notNull().default("ZAR"),
   registrationNumber: text("registration_number"),
   address: text("address").notNull(),
   numberOfUnits: integer("number_of_units").notNull(),

@@ -1,23 +1,34 @@
 import { useState } from "react";
 import { 
+  type Unit,
   useListUnits, 
   useCreateUnit, 
   useUpdateUnit,
-  getListUnitsQueryKey
+  getListUnitsQueryKey,
+  useGetComplex,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Building2, Edit2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { format } from "date-fns";
+import { useComplexCurrency } from "@/lib/complex-currency";
 
 export function Units({ complexId }: { complexId: number }) {
   const { data: units, isLoading } = useListUnits(complexId);
+  const { data: complex } = useGetComplex(complexId);
   const [search, setSearch] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedUnit, setSelectedUnit] = useState<any>(null);
+  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
+  const currencyCode = useComplexCurrency();
+  const isSectionalTitle = complex?.type === "Sectional Title";
 
-  const filteredUnits = units?.filter(u => 
+  const handleEditDialogChange = (open: boolean) => {
+    if (!open) {
+      setSelectedUnit(null);
+    }
+  };
+
+  const filteredUnits = units?.filter((u) => 
     u.unitNumber.toLowerCase().includes(search.toLowerCase()) ||
     u.ownerName?.toLowerCase().includes(search.toLowerCase()) ||
     u.tenantName?.toLowerCase().includes(search.toLowerCase())
@@ -38,11 +49,15 @@ export function Units({ complexId }: { complexId: number }) {
               Add Unit
             </button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Add New Unit</DialogTitle>
-            </DialogHeader>
-            <UnitForm complexId={complexId} onSuccess={() => setIsCreateOpen(false)} />
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[920px]">
+              <DialogHeader>
+                <DialogTitle>Add New Unit</DialogTitle>
+              </DialogHeader>
+            <UnitForm
+              complexId={complexId}
+              isSectionalTitle={isSectionalTitle}
+              onSuccess={() => setIsCreateOpen(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -94,17 +109,27 @@ export function Units({ complexId }: { complexId: number }) {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium">{unit.ownerName || <span className="text-muted-foreground italic">No owner</span>}</div>
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        {unit.ownerName || <span className="text-muted-foreground italic">No owner</span>}
+                        {unit.isTrustee && (
+                          <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
+                            {unit.trusteeRole || "Trustee"}
+                          </span>
+                        )}
+                      </div>
                       {unit.tenantName && <div className="text-xs text-muted-foreground mt-0.5">T: {unit.tenantName}</div>}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm">{formatCurrency(unit.monthlyLevy || 0)}/mo</div>
+                      <div className="text-sm">{formatCurrency(unit.monthlyLevy || 0, currencyCode)}/mo</div>
                       <div className={`text-xs font-medium mt-0.5 ${(unit.outstandingBalance || 0) > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                        Bal: {formatCurrency(unit.outstandingBalance || 0)}
+                        Bal: {formatCurrency(unit.outstandingBalance || 0, currencyCode)}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Dialog>
+                      <Dialog
+                        open={selectedUnit?.id === unit.id}
+                        onOpenChange={handleEditDialogChange}
+                      >
                         <DialogTrigger asChild>
                           <button 
                             onClick={() => setSelectedUnit(unit)}
@@ -113,11 +138,18 @@ export function Units({ complexId }: { complexId: number }) {
                             <Edit2 className="w-4 h-4" />
                           </button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[500px]">
+                        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[920px]">
                           <DialogHeader>
                             <DialogTitle>Edit Unit {unit.unitNumber}</DialogTitle>
                           </DialogHeader>
-                          {selectedUnit && <UnitForm complexId={complexId} unit={selectedUnit} onSuccess={() => {}} />}
+                          {selectedUnit?.id === unit.id && (
+                            <UnitForm
+                              complexId={complexId}
+                              isSectionalTitle={isSectionalTitle}
+                              unit={selectedUnit}
+                              onSuccess={() => setSelectedUnit(null)}
+                            />
+                          )}
                         </DialogContent>
                       </Dialog>
                     </td>
@@ -132,24 +164,51 @@ export function Units({ complexId }: { complexId: number }) {
   );
 }
 
-function UnitForm({ complexId, unit, onSuccess }: { complexId: number, unit?: any, onSuccess: () => void }) {
+function UnitForm({
+  complexId,
+  unit,
+  isSectionalTitle,
+  onSuccess,
+}: {
+  complexId: number;
+  unit?: Unit;
+  isSectionalTitle: boolean;
+  onSuccess: () => void;
+}) {
   const queryClient = useQueryClient();
   const createMutation = useCreateUnit();
   const updateMutation = useUpdateUnit();
+
+  const getOptionalString = (formData: FormData, key: string) => {
+    const value = String(formData.get(key) ?? "").trim();
+    return value === "" ? undefined : value;
+  };
+
+  const getOptionalNumber = (formData: FormData, key: string) => {
+    const value = String(formData.get(key) ?? "").trim();
+    return value === "" ? undefined : Number(value);
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const data = {
-      unitNumber: formData.get("unitNumber") as string,
-      floor: formData.get("floor") as string,
-      size: Number(formData.get("size")),
+      unitNumber: String(formData.get("unitNumber") ?? "").trim(),
+      floor: getOptionalString(formData, "floor"),
+      size: getOptionalNumber(formData, "size"),
       status: formData.get("status") as any,
-      ownerName: formData.get("ownerName") as string,
-      ownerEmail: formData.get("ownerEmail") as string,
-      ownerPhone: formData.get("ownerPhone") as string,
-      tenantName: formData.get("tenantName") as string,
-      monthlyLevy: Number(formData.get("monthlyLevy")),
+      ownerName: getOptionalString(formData, "ownerName"),
+      ownerEmail: getOptionalString(formData, "ownerEmail"),
+      ownerPhone: getOptionalString(formData, "ownerPhone"),
+      tenantName: getOptionalString(formData, "tenantName"),
+      tenantEmail: getOptionalString(formData, "tenantEmail"),
+      tenantPhone: getOptionalString(formData, "tenantPhone"),
+      isTrustee: isSectionalTitle ? formData.get("isTrustee") === "on" : false,
+      trusteeRole: isSectionalTitle ? getOptionalString(formData, "trusteeRole") : undefined,
+      trusteeStartDate: isSectionalTitle ? getOptionalString(formData, "trusteeStartDate") : undefined,
+      trusteeNotes: isSectionalTitle ? getOptionalString(formData, "trusteeNotes") : undefined,
+      monthlyLevy: getOptionalNumber(formData, "monthlyLevy"),
+      notes: getOptionalString(formData, "notes"),
     };
 
     if (unit) {
@@ -174,53 +233,120 @@ function UnitForm({ complexId, unit, onSuccess }: { complexId: number, unit?: an
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Unit Number *</label>
-          <input required name="unitNumber" defaultValue={unit?.unitNumber} className="w-full p-2 border rounded-lg" />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Status *</label>
-          <select required name="status" defaultValue={unit?.status || "Vacant"} className="w-full p-2 border rounded-lg bg-background">
-            <option value="Occupied">Occupied</option>
-            <option value="Vacant">Vacant</option>
-            <option value="Under Maintenance">Under Maintenance</option>
-          </select>
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Floor</label>
-          <input name="floor" defaultValue={unit?.floor} className="w-full p-2 border rounded-lg" />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Size (sqm)</label>
-          <input type="number" name="size" defaultValue={unit?.size} className="w-full p-2 border rounded-lg" />
-        </div>
-      </div>
-      
-      <div className="border-t pt-4 space-y-4">
-        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Owner Details</h4>
-        <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="space-y-4 rounded-xl border border-border bg-muted/10 p-4">
+          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Unit Details</h4>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Unit Number *</label>
+              <input required name="unitNumber" defaultValue={unit?.unitNumber} className="w-full p-2 border rounded-lg" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status *</label>
+              <select required name="status" defaultValue={unit?.status || "Vacant"} className="w-full p-2 border rounded-lg bg-background">
+                <option value="Occupied">Occupied</option>
+                <option value="Vacant">Vacant</option>
+                <option value="Under Maintenance">Under Maintenance</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Floor</label>
+              <input name="floor" defaultValue={unit?.floor} className="w-full p-2 border rounded-lg" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Size (sqm)</label>
+              <input type="number" name="size" defaultValue={unit?.size} className="w-full p-2 border rounded-lg" />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-xl border border-border bg-muted/10 p-4">
+          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Owner Details</h4>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Name</label>
+              <input name="ownerName" defaultValue={unit?.ownerName} className="w-full p-2 border rounded-lg" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <input type="email" name="ownerEmail" defaultValue={unit?.ownerEmail} className="w-full p-2 border rounded-lg" />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <label className="text-sm font-medium">Phone</label>
+              <input name="ownerPhone" defaultValue={unit?.ownerPhone} className="w-full p-2 border rounded-lg" />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-xl border border-border bg-muted/10 p-4">
+          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Tenant Details</h4>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Name</label>
+              <input name="tenantName" defaultValue={unit?.tenantName} className="w-full p-2 border rounded-lg" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <input type="email" name="tenantEmail" defaultValue={unit?.tenantEmail} className="w-full p-2 border rounded-lg" />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <label className="text-sm font-medium">Phone</label>
+              <input name="tenantPhone" defaultValue={unit?.tenantPhone} className="w-full p-2 border rounded-lg" />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-xl border border-border bg-muted/10 p-4">
+          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Financial & Notes</h4>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Name</label>
-            <input name="ownerName" defaultValue={unit?.ownerName} className="w-full p-2 border rounded-lg" />
+            <label className="text-sm font-medium">Monthly Levy</label>
+            <input type="number" step="0.01" name="monthlyLevy" defaultValue={unit?.monthlyLevy} className="w-full p-2 border rounded-lg" />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Email</label>
-            <input type="email" name="ownerEmail" defaultValue={unit?.ownerEmail} className="w-full p-2 border rounded-lg" />
+            <label className="text-sm font-medium">General Notes</label>
+            <textarea name="notes" rows={5} defaultValue={unit?.notes} className="w-full rounded-lg border p-2 resize-none" />
           </div>
-        </div>
+        </section>
+
+        {isSectionalTitle && (
+          <section className="space-y-4 rounded-xl border border-border bg-muted/10 p-4 lg:col-span-2">
+            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Sectional Title Governance</h4>
+            <label className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-3 text-sm">
+              <input type="checkbox" name="isTrustee" defaultChecked={Boolean(unit?.isTrustee)} className="h-4 w-4" />
+              This owner currently serves as a trustee for the body corporate
+            </label>
+            <div className="grid gap-4 lg:grid-cols-[0.9fr_0.7fr_1.4fr]">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Trustee Role</label>
+                <select name="trusteeRole" defaultValue={unit?.trusteeRole || ""} className="w-full p-2 border rounded-lg bg-background">
+                  <option value="">Select role</option>
+                  <option value="Chairperson">Chairperson</option>
+                  <option value="Secretary">Secretary</option>
+                  <option value="Treasurer">Treasurer</option>
+                  <option value="Trustee">Trustee</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Start Date</label>
+                <input type="date" name="trusteeStartDate" defaultValue={unit?.trusteeStartDate} className="w-full p-2 border rounded-lg" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Trustee Notes</label>
+                <textarea
+                  name="trusteeNotes"
+                  rows={3}
+                  defaultValue={unit?.trusteeNotes}
+                  className="w-full rounded-lg border p-2 resize-none"
+                  placeholder="Election notes, term comments, alternate contact details, or committee remarks."
+                />
+              </div>
+            </div>
+          </section>
+        )}
       </div>
 
-      <div className="border-t pt-4 space-y-4">
-        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Financial</h4>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Monthly Levy ($)</label>
-          <input type="number" step="0.01" name="monthlyLevy" defaultValue={unit?.monthlyLevy} className="w-full p-2 border rounded-lg" />
-        </div>
-      </div>
-
-      <div className="pt-4 flex justify-end">
+      <div className="sticky bottom-0 flex justify-end border-t border-border bg-background/95 pt-4 backdrop-blur">
         <button 
           type="submit" 
           disabled={isPending}

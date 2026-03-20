@@ -34,7 +34,7 @@ router.get("/", async (req, res) => {
     .leftJoin(unitsTable, eq(maintenanceRequestsTable.unitId, unitsTable.id))
     .where(eq(maintenanceRequestsTable.complexId, complexId))
     .orderBy(maintenanceRequestsTable.createdAt);
-  res.json(requests);
+  return res.json(requests);
 });
 
 router.post("/", async (req, res) => {
@@ -44,7 +44,7 @@ router.post("/", async (req, res) => {
     .insert(maintenanceRequestsTable)
     .values({ ...body, complexId })
     .returning();
-  res.status(201).json(request);
+  return res.status(201).json(request);
 });
 
 router.put("/:requestId", async (req, res) => {
@@ -63,8 +63,10 @@ router.put("/:requestId", async (req, res) => {
     .set(updateData)
     .where(and(eq(maintenanceRequestsTable.complexId, complexId), eq(maintenanceRequestsTable.id, requestId)))
     .returning();
-  if (!request) return res.status(404).json({ error: "Maintenance request not found" });
-  res.json(request);
+  if (!request) {
+    return res.status(404).json({ error: "Maintenance request not found" });
+  }
+  return res.json(request);
 });
 
 export default router;

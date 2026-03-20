@@ -23,6 +23,7 @@ export interface Complex {
   id: number;
   name: string;
   type: ComplexType;
+  currencyCode: string;
   registrationNumber?: string;
   address: string;
   numberOfUnits: number;
@@ -46,6 +47,7 @@ export const CreateComplexInputType = {
 export interface CreateComplexInput {
   name: string;
   type: CreateComplexInputType;
+  currencyCode?: string;
   registrationNumber?: string;
   address: string;
   numberOfUnits: number;
@@ -85,6 +87,10 @@ export interface Unit {
   tenantName?: string;
   tenantEmail?: string;
   tenantPhone?: string;
+  isTrustee?: boolean;
+  trusteeRole?: string;
+  trusteeStartDate?: string;
+  trusteeNotes?: string;
   monthlyLevy?: number;
   outstandingBalance?: number;
   notes?: string;
@@ -111,6 +117,10 @@ export interface CreateUnitInput {
   tenantName?: string;
   tenantEmail?: string;
   tenantPhone?: string;
+  isTrustee?: boolean;
+  trusteeRole?: string;
+  trusteeStartDate?: string;
+  trusteeNotes?: string;
   monthlyLevy?: number;
   notes?: string;
 }
@@ -317,6 +327,8 @@ export type CommunicationSentTo =
 
 export const CommunicationSentTo = {
   All_Units: "All Units",
+  All_Owners: "All Owners",
+  Trustees: "Trustees",
   Selected_Units: "Selected Units",
 } as const;
 
@@ -348,6 +360,8 @@ export type CreateCommunicationInputSentTo =
 
 export const CreateCommunicationInputSentTo = {
   All_Units: "All Units",
+  All_Owners: "All Owners",
+  Trustees: "Trustees",
   Selected_Units: "Selected Units",
 } as const;
 

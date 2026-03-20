@@ -1,13 +1,15 @@
-import app from "./app";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
 
-const rawPort = process.env["PORT"];
+const currentDir = dirname(fileURLToPath(import.meta.url));
+const envPath = resolve(currentDir, "../../../.env");
 
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
+dotenv.config({ path: envPath, quiet: true });
 
+const { default: app } = await import("./app");
+
+const rawPort = process.env.PORT || "3000";
 const port = Number(rawPort);
 
 if (Number.isNaN(port) || port <= 0) {
@@ -16,4 +18,5 @@ if (Number.isNaN(port) || port <= 0) {
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
+  console.log("DB:", process.env.DATABASE_URL);
 });
