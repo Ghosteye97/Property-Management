@@ -81,6 +81,14 @@ export interface Unit {
   floor?: string;
   size?: number;
   status: UnitStatus;
+  primaryUse?: string;
+  ownershipStartDate?: string;
+  correspondencePreference?: string;
+  correspondenceAddress?: string;
+  participationQuota?: number;
+  parkingBay?: string;
+  storeroomNumber?: string;
+  utilityMeterNumber?: string;
   ownerName?: string;
   ownerEmail?: string;
   ownerPhone?: string;
@@ -111,6 +119,14 @@ export interface CreateUnitInput {
   floor?: string;
   size?: number;
   status: CreateUnitInputStatus;
+  primaryUse?: string;
+  ownershipStartDate?: string;
+  correspondencePreference?: string;
+  correspondenceAddress?: string;
+  participationQuota?: number;
+  parkingBay?: string;
+  storeroomNumber?: string;
+  utilityMeterNumber?: string;
   ownerName?: string;
   ownerEmail?: string;
   ownerPhone?: string;
@@ -373,11 +389,116 @@ export interface CreateCommunicationInput {
   unitIds?: number[];
 }
 
+export type MeetingType = (typeof MeetingType)[keyof typeof MeetingType];
+
+export const MeetingType = {
+  AGM: "AGM",
+  Trustee_Meeting: "Trustee Meeting",
+  Special_General_Meeting: "Special General Meeting",
+  Other: "Other",
+} as const;
+
+export type MeetingStatus = (typeof MeetingStatus)[keyof typeof MeetingStatus];
+
+export const MeetingStatus = {
+  Draft: "Draft",
+  Scheduled: "Scheduled",
+  Completed: "Completed",
+  Cancelled: "Cancelled",
+} as const;
+
+export type ResolutionStatus =
+  (typeof ResolutionStatus)[keyof typeof ResolutionStatus];
+
+export const ResolutionStatus = {
+  Proposed: "Proposed",
+  Passed: "Passed",
+  Deferred: "Deferred",
+  Rejected: "Rejected",
+} as const;
+
+export interface MeetingResolution {
+  id: number;
+  meetingId: number;
+  title: string;
+  status: ResolutionStatus;
+  notes?: string;
+  effectiveDate?: string;
+  createdAt: string;
+}
+
+export interface Meeting {
+  id: number;
+  complexId: number;
+  title: string;
+  meetingType: MeetingType;
+  status: MeetingStatus;
+  scheduledAt: string;
+  venue?: string;
+  agenda?: string;
+  minutes?: string;
+  attendanceCount: number;
+  quorumReached: boolean;
+  createdAt: string;
+  resolutions: MeetingResolution[];
+}
+
+export type CreateMeetingInputMeetingType =
+  (typeof CreateMeetingInputMeetingType)[keyof typeof CreateMeetingInputMeetingType];
+
+export const CreateMeetingInputMeetingType = {
+  AGM: "AGM",
+  Trustee_Meeting: "Trustee Meeting",
+  Special_General_Meeting: "Special General Meeting",
+  Other: "Other",
+} as const;
+
+export type CreateMeetingInputStatus =
+  (typeof CreateMeetingInputStatus)[keyof typeof CreateMeetingInputStatus];
+
+export const CreateMeetingInputStatus = {
+  Draft: "Draft",
+  Scheduled: "Scheduled",
+  Completed: "Completed",
+  Cancelled: "Cancelled",
+} as const;
+
+export interface CreateMeetingInput {
+  title: string;
+  meetingType: CreateMeetingInputMeetingType;
+  status: CreateMeetingInputStatus;
+  scheduledAt: string;
+  venue?: string;
+  agenda?: string;
+  minutes?: string;
+  attendanceCount?: number;
+  quorumReached?: boolean;
+}
+
+export type CreateMeetingResolutionInputStatus =
+  (typeof CreateMeetingResolutionInputStatus)[keyof typeof CreateMeetingResolutionInputStatus];
+
+export const CreateMeetingResolutionInputStatus = {
+  Proposed: "Proposed",
+  Passed: "Passed",
+  Deferred: "Deferred",
+  Rejected: "Rejected",
+} as const;
+
+export interface CreateMeetingResolutionInput {
+  title: string;
+  status: CreateMeetingResolutionInputStatus;
+  notes?: string;
+  effectiveDate?: string;
+}
+
 export type DocumentCategory =
   (typeof DocumentCategory)[keyof typeof DocumentCategory];
 
 export const DocumentCategory = {
-  Compliance: "Compliance",
+  CSOS___Compliance: "CSOS & Compliance",
+  AGM___Meetings: "AGM & Meetings",
+  Owner_Records: "Owner Records",
   Contract: "Contract",
   Financial: "Financial",
   Rules: "Rules",
@@ -391,6 +512,10 @@ export interface Document {
   unitId?: number;
   name: string;
   category: DocumentCategory;
+  sourceType?: string;
+  fileName?: string;
+  mimeType?: string;
+  formData?: string;
   fileUrl?: string;
   fileSize?: string;
   uploadedAt: string;
@@ -400,7 +525,9 @@ export type CreateDocumentInputCategory =
   (typeof CreateDocumentInputCategory)[keyof typeof CreateDocumentInputCategory];
 
 export const CreateDocumentInputCategory = {
-  Compliance: "Compliance",
+  CSOS___Compliance: "CSOS & Compliance",
+  AGM___Meetings: "AGM & Meetings",
+  Owner_Records: "Owner Records",
   Contract: "Contract",
   Financial: "Financial",
   Rules: "Rules",
@@ -412,6 +539,11 @@ export interface CreateDocumentInput {
   unitId?: number;
   name: string;
   category: CreateDocumentInputCategory;
+  sourceType?: string;
+  formData?: string;
+  fileName?: string;
+  fileContentBase64?: string;
+  mimeType?: string;
   fileUrl?: string;
   fileSize?: string;
 }

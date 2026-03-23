@@ -1,24 +1,28 @@
 import { Link, useRoute } from "wouter";
 import { 
   Building2, Users, Receipt, Wrench, 
-  FileText, Megaphone, BarChart3, Settings,
+  FileText, Megaphone, BarChart3, Settings, CalendarDays, Inbox,
   ChevronLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
   complexId: string;
+  complexType?: string;
 }
 
-export function Sidebar({ complexId }: SidebarProps) {
+export function Sidebar({ complexId, complexType }: SidebarProps) {
   const [match, params] = useRoute("/complexes/:id/:section?");
   const currentSection = params?.section || "overview";
+  const isSectionalTitle = complexType === "Sectional Title";
 
   const navItems = [
     { id: "overview", label: "Overview", icon: Building2 },
     { id: "units", label: "Units", icon: Users },
     { id: "billing", label: "Billing", icon: Receipt },
     { id: "maintenance", label: "Maintenance", icon: Wrench },
+    ...(isSectionalTitle ? [{ id: "meetings", label: "Meetings", icon: CalendarDays }] : []),
+    { id: "inbox", label: "Inbox", icon: Inbox },
     { id: "documents", label: "Documents", icon: FileText },
     { id: "communications", label: "Communications", icon: Megaphone },
     { id: "reports", label: "Reports", icon: BarChart3 },

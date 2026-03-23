@@ -8,8 +8,9 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Building2, Plus, ArrowRight, MapPin, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
-export function ComplexesList() {
+export function ComplexesList({ onLogout }: { onLogout?: () => void }) {
   const { data, isLoading } = useListComplexes();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -34,20 +35,32 @@ export function ComplexesList() {
               </p>
             </div>
             
-            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-              <DialogTrigger asChild>
-                <button className="bg-white text-primary px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2">
-                  <Plus className="w-5 h-5" />
-                  New Complex
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {onLogout ? (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="rounded-xl border border-white/30 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/20"
+                >
+                  Log Out
                 </button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle className="font-display">Add Property</DialogTitle>
-                </DialogHeader>
-                <CreateComplexForm onSuccess={() => setIsCreateOpen(false)} />
-              </DialogContent>
-            </Dialog>
+              ) : null}
+
+              <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                <DialogTrigger asChild>
+                  <button className="bg-white text-primary px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2">
+                    <Plus className="w-5 h-5" />
+                    New Complex
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle className="font-display">Add Property</DialogTitle>
+                  </DialogHeader>
+                  <CreateComplexForm onSuccess={() => setIsCreateOpen(false)} />
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </div>
       </div>
@@ -126,6 +139,7 @@ export function ComplexesList() {
 function CreateComplexForm({ onSuccess }: { onSuccess: () => void }) {
   const createMutation = useCreateComplex();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -141,7 +155,18 @@ function CreateComplexForm({ onSuccess }: { onSuccess: () => void }) {
     }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListComplexesQueryKey() });
+        toast({
+          title: "Complex Created",
+          description: "The new complex was saved successfully.",
+        });
         onSuccess();
+      },
+      onError: () => {
+        toast({
+          title: "Unable to Create Complex",
+          description: "Please make sure you are still signed in and try again.",
+          variant: "destructive",
+        });
       }
     });
   };

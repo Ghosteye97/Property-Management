@@ -1,22 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   type Communication,
+  type Document,
   type Unit,
+  getListDocumentsQueryKey,
   getListCommunicationsQueryKey,
   useCreateCommunication,
   useGetComplex,
   useListCommunications,
+  useListDocuments,
   useListUnits,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Megaphone, Mail, Users, ShieldCheck } from "lucide-react";
-
-type RecipientScope = "All Units" | "All Owners" | "Trustees" | "Selected Units";
+import { Megaphone, Mail, Paperclip, TriangleAlert, Users, ShieldCheck } from "lucide-react";
+import { appendLinkedDocuments, getAudienceStats, type RecipientScope } from "@/lib/communications";
 
 export function Communications({ complexId }: { complexId: number }) {
   const { data: complex } = useGetComplex(complexId);
   const { data: units, isLoading: unitsLoading } = useListUnits(complexId);
+  const { data: documents } = useListDocuments(complexId);
   const { data: communications, isLoading: communicationsLoading } = useListCommunications(complexId);
   const createMutation = useCreateCommunication();
   const queryClient = useQueryClient();
@@ -37,6 +40,11 @@ export function Communications({ complexId }: { complexId: number }) {
     setRecipientScope(isSectionalTitle ? "All Owners" : "All Units");
   }, [isSectionalTitle]);
 
+  const selectedAudienceStats = useMemo(
+    () => getAudienceStats(units || [], recipientScope),
+    [recipientScope, units],
+  );
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -44,13 +52,19 @@ export function Communications({ complexId }: { complexId: number }) {
       .getAll("unitIds")
       .map((value) => Number(value))
       .filter((value) => Number.isInteger(value));
+    const selectedDocumentIds = formData
+      .getAll("documentIds")
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value));
+    const linkedDocuments = (documents || []).filter((document) => selectedDocumentIds.includes(document.id));
+    const stats = getAudienceStats(units || [], recipientScope, selectedUnitIds);
 
     createMutation.mutate(
       {
         complexId,
         data: {
           subject: String(formData.get("subject") ?? "").trim(),
-          body: String(formData.get("body") ?? "").trim(),
+          body: appendLinkedDocuments(String(formData.get("body") ?? "").trim(), linkedDocuments),
           type: formData.get("type") as "Newsletter" | "Notice" | "Reminder" | "Emergency" | "Other",
           sentTo: recipientScope,
           unitIds: recipientScope === "Selected Units" ? selectedUnitIds : undefined,
@@ -59,6 +73,7 @@ export function Communications({ complexId }: { complexId: number }) {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListCommunicationsQueryKey(complexId) });
+          queryClient.invalidateQueries({ queryKey: getListDocumentsQueryKey(complexId) });
           event.currentTarget.reset();
           setRecipientScope(isSectionalTitle ? "All Owners" : "All Units");
         },
@@ -185,6 +200,55 @@ export function Communications({ complexId }: { complexId: number }) {
               </div>
             )}
 
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl border bg-muted/20 p-4">
+                <p className="text-sm font-medium text-foreground">Recipient Readiness</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  This notice targets {selectedAudienceStats.recipientCount} {selectedAudienceStats.audienceLabel}.
+                </p>
+                <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+                  <Mail className="h-4 w-4" />
+                  Missing emails: {selectedAudienceStats.missingEmailCount}
+                </div>
+              </div>
+
+              <div className="rounded-xl border bg-muted/20 p-4">
+                <p className="text-sm font-medium text-foreground">Suggested Use</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Use `All Owners` for AGM notices and body corporate decisions, and `Trustees` for committee-only coordination.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-xl border bg-muted/20 p-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">Link Documents</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Add supporting files like AGM packs, minutes, rules, or notices. The selected document names will be included in the saved message.
+                </p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {(documents || []).length > 0 ? (
+                  (documents || []).slice().reverse().map((document: Document) => (
+                    <label key={document.id} className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2 text-sm">
+                      <input type="checkbox" name="documentIds" value={document.id} className="mt-1 h-4 w-4" />
+                      <span>
+                        <span className="flex items-center gap-1 font-medium text-foreground">
+                          <Paperclip className="h-3.5 w-3.5" />
+                          {document.name}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">{document.category}</span>
+                      </span>
+                    </label>
+                  ))
+                ) : (
+                  <div className="rounded-lg border border-dashed bg-background px-3 py-4 text-sm text-muted-foreground">
+                    No documents available yet.
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="flex justify-end">
               <button
                 type="submit"
@@ -233,6 +297,22 @@ export function Communications({ complexId }: { complexId: number }) {
                         {communication.recipientCount || 0} recipients
                       </span>
                     </div>
+                    {(communication.body.includes("Linked documents:") || communication.recipientCount === 0) && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {communication.body.includes("Linked documents:") ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                            <Paperclip className="h-3 w-3" />
+                            Documents linked
+                          </span>
+                        ) : null}
+                        {(communication.recipientCount || 0) === 0 ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+                            <TriangleAlert className="h-3 w-3" />
+                            No recipients matched
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
                     <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">{communication.body}</p>
                     <p className="mt-3 text-xs text-muted-foreground">
                       Logged {format(new Date(communication.createdAt), "dd MMM yyyy, HH:mm")}

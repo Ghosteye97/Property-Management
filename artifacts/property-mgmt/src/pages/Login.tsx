@@ -2,22 +2,28 @@ import { useState } from "react";
 import { ShieldCheck, Building2 } from "lucide-react";
 
 type LoginPageProps = {
-  onLogin: (email: string, password: string) => boolean;
+  onLogin: (
+    email: string,
+    password: string,
+  ) => Promise<{ success: boolean; message?: string }>;
 };
 
 export function LoginPage({ onLogin }: LoginPageProps) {
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
+    setIsSubmitting(true);
 
-    const success = onLogin(email, password);
+    const result = await onLogin(email, password);
+    setIsSubmitting(false);
 
-    if (!success) {
-      setError("Incorrect email or password.");
+    if (!result.success) {
+      setError(result.message || "Incorrect email or password.");
       return;
     }
 
@@ -100,9 +106,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 hover:shadow-xl"
                 >
-                  Continue
+                  {isSubmitting ? "Signing In..." : "Continue"}
                 </button>
               </form>
             </div>

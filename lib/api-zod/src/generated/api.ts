@@ -169,6 +169,14 @@ export const ListUnitsResponseItem = zod.object({
   floor: zod.string().optional(),
   size: zod.number().optional(),
   status: zod.enum(["Occupied", "Vacant", "Under Maintenance"]),
+  primaryUse: zod.string().optional(),
+  ownershipStartDate: zod.string().optional(),
+  correspondencePreference: zod.string().optional(),
+  correspondenceAddress: zod.string().optional(),
+  participationQuota: zod.number().optional(),
+  parkingBay: zod.string().optional(),
+  storeroomNumber: zod.string().optional(),
+  utilityMeterNumber: zod.string().optional(),
   ownerName: zod.string().optional(),
   ownerEmail: zod.string().optional(),
   ownerPhone: zod.string().optional(),
@@ -198,6 +206,14 @@ export const CreateUnitBody = zod.object({
   floor: zod.string().optional(),
   size: zod.number().optional(),
   status: zod.enum(["Occupied", "Vacant", "Under Maintenance"]),
+  primaryUse: zod.string().optional(),
+  ownershipStartDate: zod.string().optional(),
+  correspondencePreference: zod.string().optional(),
+  correspondenceAddress: zod.string().optional(),
+  participationQuota: zod.number().optional(),
+  parkingBay: zod.string().optional(),
+  storeroomNumber: zod.string().optional(),
+  utilityMeterNumber: zod.string().optional(),
   ownerName: zod.string().optional(),
   ownerEmail: zod.string().optional(),
   ownerPhone: zod.string().optional(),
@@ -227,6 +243,14 @@ export const GetUnitResponse = zod.object({
   floor: zod.string().optional(),
   size: zod.number().optional(),
   status: zod.enum(["Occupied", "Vacant", "Under Maintenance"]),
+  primaryUse: zod.string().optional(),
+  ownershipStartDate: zod.string().optional(),
+  correspondencePreference: zod.string().optional(),
+  correspondenceAddress: zod.string().optional(),
+  participationQuota: zod.number().optional(),
+  parkingBay: zod.string().optional(),
+  storeroomNumber: zod.string().optional(),
+  utilityMeterNumber: zod.string().optional(),
   ownerName: zod.string().optional(),
   ownerEmail: zod.string().optional(),
   ownerPhone: zod.string().optional(),
@@ -256,6 +280,14 @@ export const UpdateUnitBody = zod.object({
   floor: zod.string().optional(),
   size: zod.number().optional(),
   status: zod.enum(["Occupied", "Vacant", "Under Maintenance"]),
+  primaryUse: zod.string().optional(),
+  ownershipStartDate: zod.string().optional(),
+  correspondencePreference: zod.string().optional(),
+  correspondenceAddress: zod.string().optional(),
+  participationQuota: zod.number().optional(),
+  parkingBay: zod.string().optional(),
+  storeroomNumber: zod.string().optional(),
+  utilityMeterNumber: zod.string().optional(),
   ownerName: zod.string().optional(),
   ownerEmail: zod.string().optional(),
   ownerPhone: zod.string().optional(),
@@ -277,12 +309,24 @@ export const UpdateUnitResponse = zod.object({
   floor: zod.string().optional(),
   size: zod.number().optional(),
   status: zod.enum(["Occupied", "Vacant", "Under Maintenance"]),
+  primaryUse: zod.string().optional(),
+  ownershipStartDate: zod.string().optional(),
+  correspondencePreference: zod.string().optional(),
+  correspondenceAddress: zod.string().optional(),
+  participationQuota: zod.number().optional(),
+  parkingBay: zod.string().optional(),
+  storeroomNumber: zod.string().optional(),
+  utilityMeterNumber: zod.string().optional(),
   ownerName: zod.string().optional(),
   ownerEmail: zod.string().optional(),
   ownerPhone: zod.string().optional(),
   tenantName: zod.string().optional(),
   tenantEmail: zod.string().optional(),
   tenantPhone: zod.string().optional(),
+  isTrustee: zod.boolean().optional(),
+  trusteeRole: zod.string().optional(),
+  trusteeStartDate: zod.string().optional(),
+  trusteeNotes: zod.string().optional(),
   monthlyLevy: zod.number().optional(),
   outstandingBalance: zod.number().optional(),
   notes: zod.string().optional(),
@@ -509,6 +553,125 @@ export const CreateCommunicationBody = zod.object({
 });
 
 /**
+ * @summary List meetings for a complex
+ */
+export const ListMeetingsParams = zod.object({
+  complexId: zod.coerce.number(),
+});
+
+export const MeetingResolutionResponseItem = zod.object({
+  id: zod.number(),
+  meetingId: zod.number(),
+  title: zod.string(),
+  status: zod.enum(["Proposed", "Passed", "Deferred", "Rejected"]),
+  notes: zod.string().optional(),
+  effectiveDate: zod.date().optional(),
+  createdAt: zod.date(),
+});
+
+export const ListMeetingsResponseItem = zod.object({
+  id: zod.number(),
+  complexId: zod.number(),
+  title: zod.string(),
+  meetingType: zod.enum([
+    "AGM",
+    "Trustee Meeting",
+    "Special General Meeting",
+    "Other",
+  ]),
+  status: zod.enum(["Draft", "Scheduled", "Completed", "Cancelled"]),
+  scheduledAt: zod.date(),
+  venue: zod.string().optional(),
+  agenda: zod.string().optional(),
+  minutes: zod.string().optional(),
+  attendanceCount: zod.number(),
+  quorumReached: zod.boolean(),
+  createdAt: zod.date(),
+  resolutions: zod.array(MeetingResolutionResponseItem),
+});
+export const ListMeetingsResponse = zod.array(ListMeetingsResponseItem);
+
+/**
+ * @summary Create a meeting
+ */
+export const CreateMeetingParams = zod.object({
+  complexId: zod.coerce.number(),
+});
+
+export const CreateMeetingBody = zod.object({
+  title: zod.string(),
+  meetingType: zod.enum([
+    "AGM",
+    "Trustee Meeting",
+    "Special General Meeting",
+    "Other",
+  ]),
+  status: zod.enum(["Draft", "Scheduled", "Completed", "Cancelled"]),
+  scheduledAt: zod.date(),
+  venue: zod.string().optional(),
+  agenda: zod.string().optional(),
+  minutes: zod.string().optional(),
+  attendanceCount: zod.number().default(0),
+  quorumReached: zod.boolean().default(false),
+});
+
+/**
+ * @summary Update a meeting
+ */
+export const UpdateMeetingParams = zod.object({
+  complexId: zod.coerce.number(),
+  meetingId: zod.coerce.number(),
+});
+
+export const UpdateMeetingBody = zod.object({
+  title: zod.string(),
+  meetingType: zod.enum([
+    "AGM",
+    "Trustee Meeting",
+    "Special General Meeting",
+    "Other",
+  ]),
+  status: zod.enum(["Draft", "Scheduled", "Completed", "Cancelled"]),
+  scheduledAt: zod.date(),
+  venue: zod.string().optional(),
+  agenda: zod.string().optional(),
+  minutes: zod.string().optional(),
+  attendanceCount: zod.number(),
+  quorumReached: zod.boolean(),
+});
+
+/**
+ * @summary Create a resolution for a meeting
+ */
+export const CreateMeetingResolutionParams = zod.object({
+  complexId: zod.coerce.number(),
+  meetingId: zod.coerce.number(),
+});
+
+export const CreateMeetingResolutionBody = zod.object({
+  title: zod.string(),
+  status: zod.enum(["Proposed", "Passed", "Deferred", "Rejected"]),
+  notes: zod.string().optional(),
+  effectiveDate: zod.date().optional(),
+});
+
+/**
+ * @summary Update a meeting resolution
+ */
+export const UpdateMeetingResolutionParams = zod.object({
+  complexId: zod.coerce.number(),
+  meetingId: zod.coerce.number(),
+  resolutionId: zod.coerce.number(),
+});
+
+export const UpdateMeetingResolutionBody = zod.object({
+  title: zod.string(),
+  status: zod.enum(["Proposed", "Passed", "Deferred", "Rejected"]),
+  notes: zod.string().optional(),
+  effectiveDate: zod.date().optional(),
+});
+
+/**
  * @summary List documents for a complex
  */
 export const ListDocumentsParams = zod.object({
@@ -521,13 +684,19 @@ export const ListDocumentsResponseItem = zod.object({
   unitId: zod.number().optional(),
   name: zod.string(),
   category: zod.enum([
-    "Compliance",
+    "CSOS & Compliance",
+    "AGM & Meetings",
+    "Owner Records",
     "Contract",
     "Financial",
     "Rules",
     "Insurance",
     "Other",
   ]),
+  sourceType: zod.string().optional(),
+  fileName: zod.string().optional(),
+  mimeType: zod.string().optional(),
+  formData: zod.string().optional(),
   fileUrl: zod.string().optional(),
   fileSize: zod.string().optional(),
   uploadedAt: zod.date(),
@@ -545,13 +714,20 @@ export const CreateDocumentBody = zod.object({
   unitId: zod.number().optional(),
   name: zod.string(),
   category: zod.enum([
-    "Compliance",
+    "CSOS & Compliance",
+    "AGM & Meetings",
+    "Owner Records",
     "Contract",
     "Financial",
     "Rules",
     "Insurance",
     "Other",
   ]),
+  sourceType: zod.string().optional(),
+  formData: zod.string().optional(),
+  fileName: zod.string().optional(),
+  fileContentBase64: zod.string().optional(),
+  mimeType: zod.string().optional(),
   fileUrl: zod.string().optional(),
   fileSize: zod.string().optional(),
 });

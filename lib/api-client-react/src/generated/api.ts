@@ -26,12 +26,16 @@ import type {
   CreateComplexInput,
   CreateDocumentInput,
   CreateInvoiceInput,
+  CreateMeetingInput,
+  CreateMeetingResolutionInput,
   CreateMaintenanceInput,
   CreateUnitInput,
   Document,
   FinancialReport,
   HealthStatus,
   Invoice,
+  Meeting,
+  MeetingResolution,
   MaintenanceRequest,
   OccupancyReport,
   Unit,
@@ -2243,3 +2247,327 @@ export function useGetOccupancyReport<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List meetings for a complex
+ */
+export const getListMeetingsUrl = (complexId: number) => {
+  return `/api/complexes/${complexId}/meetings`;
+};
+
+export const listMeetings = async (
+  complexId: number,
+  options?: RequestInit,
+): Promise<Meeting[]> => {
+  return customFetch<Meeting[]>(getListMeetingsUrl(complexId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListMeetingsQueryKey = (complexId: number) => {
+  return [`/api/complexes/${complexId}/meetings`] as const;
+};
+
+export const getListMeetingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMeetings>>,
+  TError = ErrorType<unknown>,
+>(
+  complexId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listMeetings>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListMeetingsQueryKey(complexId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMeetings>>> = ({
+    signal,
+  }) => listMeetings(complexId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!complexId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMeetings>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export function useListMeetings<
+  TData = Awaited<ReturnType<typeof listMeetings>>,
+  TError = ErrorType<unknown>,
+>(
+  complexId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listMeetings>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListMeetingsQueryOptions(complexId, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a meeting
+ */
+export const getCreateMeetingUrl = (complexId: number) => {
+  return `/api/complexes/${complexId}/meetings`;
+};
+
+export const createMeeting = async (
+  complexId: number,
+  createMeetingInput: CreateMeetingInput,
+  options?: RequestInit,
+): Promise<Meeting> => {
+  return customFetch<Meeting>(getCreateMeetingUrl(complexId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createMeetingInput),
+  });
+};
+
+export const useCreateMeeting = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createMeeting>>,
+    TError,
+    { complexId: number; data: BodyType<CreateMeetingInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createMeeting>>,
+  TError,
+  { complexId: number; data: BodyType<CreateMeetingInput> },
+  TContext
+> => {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createMeeting>>,
+    { complexId: number; data: BodyType<CreateMeetingInput> }
+  > = ({ complexId, data }) => createMeeting(complexId, data, options?.request);
+
+  return useMutation({
+    mutationKey: ["createMeeting"],
+    mutationFn,
+    ...options?.mutation,
+  });
+};
+
+/**
+ * @summary Update a meeting
+ */
+export const getUpdateMeetingUrl = (complexId: number, meetingId: number) => {
+  return `/api/complexes/${complexId}/meetings/${meetingId}`;
+};
+
+export const updateMeeting = async (
+  complexId: number,
+  meetingId: number,
+  updateMeetingInput: CreateMeetingInput,
+  options?: RequestInit,
+): Promise<Meeting> => {
+  return customFetch<Meeting>(getUpdateMeetingUrl(complexId, meetingId), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateMeetingInput),
+  });
+};
+
+export const useUpdateMeeting = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMeeting>>,
+    TError,
+    { complexId: number; meetingId: number; data: BodyType<CreateMeetingInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateMeeting>>,
+  TError,
+  { complexId: number; meetingId: number; data: BodyType<CreateMeetingInput> },
+  TContext
+> => {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMeeting>>,
+    { complexId: number; meetingId: number; data: BodyType<CreateMeetingInput> }
+  > = ({ complexId, meetingId, data }) =>
+    updateMeeting(complexId, meetingId, data, options?.request);
+
+  return useMutation({
+    mutationKey: ["updateMeeting"],
+    mutationFn,
+    ...options?.mutation,
+  });
+};
+
+/**
+ * @summary Create a resolution for a meeting
+ */
+export const getCreateMeetingResolutionUrl = (
+  complexId: number,
+  meetingId: number,
+) => {
+  return `/api/complexes/${complexId}/meetings/${meetingId}/resolutions`;
+};
+
+export const createMeetingResolution = async (
+  complexId: number,
+  meetingId: number,
+  createMeetingResolutionInput: CreateMeetingResolutionInput,
+  options?: RequestInit,
+): Promise<MeetingResolution> => {
+  return customFetch<MeetingResolution>(
+    getCreateMeetingResolutionUrl(complexId, meetingId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(createMeetingResolutionInput),
+    },
+  );
+};
+
+export const useCreateMeetingResolution = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createMeetingResolution>>,
+    TError,
+    {
+      complexId: number;
+      meetingId: number;
+      data: BodyType<CreateMeetingResolutionInput>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createMeetingResolution>>,
+  TError,
+  {
+    complexId: number;
+    meetingId: number;
+    data: BodyType<CreateMeetingResolutionInput>;
+  },
+  TContext
+> => {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createMeetingResolution>>,
+    {
+      complexId: number;
+      meetingId: number;
+      data: BodyType<CreateMeetingResolutionInput>;
+    }
+  > = ({ complexId, meetingId, data }) =>
+    createMeetingResolution(complexId, meetingId, data, options?.request);
+
+  return useMutation({
+    mutationKey: ["createMeetingResolution"],
+    mutationFn,
+    ...options?.mutation,
+  });
+};
+
+/**
+ * @summary Update a meeting resolution
+ */
+export const getUpdateMeetingResolutionUrl = (
+  complexId: number,
+  meetingId: number,
+  resolutionId: number,
+) => {
+  return `/api/complexes/${complexId}/meetings/${meetingId}/resolutions/${resolutionId}`;
+};
+
+export const updateMeetingResolution = async (
+  complexId: number,
+  meetingId: number,
+  resolutionId: number,
+  updateMeetingResolutionInput: CreateMeetingResolutionInput,
+  options?: RequestInit,
+): Promise<MeetingResolution> => {
+  return customFetch<MeetingResolution>(
+    getUpdateMeetingResolutionUrl(complexId, meetingId, resolutionId),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(updateMeetingResolutionInput),
+    },
+  );
+};
+
+export const useUpdateMeetingResolution = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMeetingResolution>>,
+    TError,
+    {
+      complexId: number;
+      meetingId: number;
+      resolutionId: number;
+      data: BodyType<CreateMeetingResolutionInput>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateMeetingResolution>>,
+  TError,
+  {
+    complexId: number;
+    meetingId: number;
+    resolutionId: number;
+    data: BodyType<CreateMeetingResolutionInput>;
+  },
+  TContext
+> => {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMeetingResolution>>,
+    {
+      complexId: number;
+      meetingId: number;
+      resolutionId: number;
+      data: BodyType<CreateMeetingResolutionInput>;
+    }
+  > = ({ complexId, meetingId, resolutionId, data }) =>
+    updateMeetingResolution(
+      complexId,
+      meetingId,
+      resolutionId,
+      data,
+      options?.request,
+    );
+
+  return useMutation({
+    mutationKey: ["updateMeetingResolution"],
+    mutationFn,
+    ...options?.mutation,
+  });
+};

@@ -12,12 +12,24 @@ export interface CreateUnitInput {
   floor?: string;
   size?: number;
   status: CreateUnitInputStatus;
+  primaryUse?: string;
+  ownershipStartDate?: string;
+  correspondencePreference?: string;
+  correspondenceAddress?: string;
+  participationQuota?: number;
+  parkingBay?: string;
+  storeroomNumber?: string;
+  utilityMeterNumber?: string;
   ownerName?: string;
   ownerEmail?: string;
   ownerPhone?: string;
   tenantName?: string;
   tenantEmail?: string;
   tenantPhone?: string;
+  isTrustee?: boolean;
+  trusteeRole?: string;
+  trusteeStartDate?: string;
+  trusteeNotes?: string;
   monthlyLevy?: number;
   notes?: string;
 }

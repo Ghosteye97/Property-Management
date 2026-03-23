@@ -22,6 +22,48 @@
       "when": 1775001000000,
       "tag": "0002_unit_trustees",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775260000000,
+      "tag": "0003_meetings",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775265000000,
+      "tag": "0004_users",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775272000000,
+      "tag": "0005_document_form_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775278000000,
+      "tag": "0006_unit_profile_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1775284000000,
+      "tag": "0007_inbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775290000000,
+      "tag": "0008_tenants",
+      "breakpoints": true
     }
   ]
 }

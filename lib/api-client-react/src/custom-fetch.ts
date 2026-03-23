@@ -56,8 +56,11 @@ function resolveApiBaseUrl(): string {
     return envBaseUrl.replace(/\/$/, "");
   }
 
-  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-    return "http://127.0.0.1:3000";
+  if (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  ) {
+    return `http://${window.location.hostname}:3000`;
   }
 
   return "";
@@ -196,7 +199,12 @@ export async function customFetch<T = unknown>(
     headers.set("accept", DEFAULT_JSON_ACCEPT);
   }
 
-  const response = await fetch(requestInput, { ...init, method, headers });
+  const response = await fetch(requestInput, {
+    ...init,
+    method,
+    headers,
+    credentials: init.credentials ?? "include",
+  });
 
   if (!response.ok) {
     throw new ApiError(response, null);

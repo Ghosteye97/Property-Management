@@ -1,15 +1,28 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { requireManagementAuth } from "./lib/auth";
 import router from "./routes";
 
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const app: Express = express();
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const uploadsDir = path.resolve(currentDir, "../../../uploads");
 
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  }),
+);
+app.use(cookieParser());
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ extended: true, limit: "25mb" }));
+app.use("/api/uploads", requireManagementAuth, express.static(uploadsDir));
 
 // ✅ TEMP health check (safe, no schema imports)
 app.get("/api/health", async (_req, res) => {

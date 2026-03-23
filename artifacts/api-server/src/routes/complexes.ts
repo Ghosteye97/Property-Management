@@ -18,11 +18,25 @@ import {
 const router = Router();
 
 router.get("/", async (_req, res) => {
-  const complexes = await db.select().from(complexesTable).orderBy(complexesTable.createdAt);
+  const currentUser = res.locals.currentUser as { tenantId?: number | null } | undefined;
+  if (!currentUser?.tenantId) {
+    return res.status(403).json({ error: "Tenant context required" });
+  }
+
+  const complexes = await db
+    .select()
+    .from(complexesTable)
+    .where(eq(complexesTable.tenantId, currentUser.tenantId))
+    .orderBy(complexesTable.createdAt);
   return res.json(complexes);
 });
 
 router.post("/", async (req, res) => {
+  const currentUser = res.locals.currentUser as { tenantId?: number | null } | undefined;
+  if (!currentUser?.tenantId) {
+    return res.status(403).json({ error: "Tenant context required" });
+  }
+
   const body = CreateComplexBody.parse(req.body);
 
   if (!Number.isInteger(body.numberOfUnits) || body.numberOfUnits < 0) {
@@ -30,7 +44,10 @@ router.post("/", async (req, res) => {
   }
 
   const complex = await db.transaction(async (tx) => {
-    const [createdComplex] = await tx.insert(complexesTable).values(body).returning();
+    const [createdComplex] = await tx
+      .insert(complexesTable)
+      .values({ ...body, tenantId: currentUser.tenantId! })
+      .returning();
 
     if (body.numberOfUnits > 0) {
       const unitsToInsert = Array.from({ length: body.numberOfUnits }, (_, index) => ({
@@ -49,8 +66,16 @@ router.post("/", async (req, res) => {
 });
 
 router.get("/:complexId", async (req, res) => {
+  const currentUser = res.locals.currentUser as { tenantId?: number | null } | undefined;
+  if (!currentUser?.tenantId) {
+    return res.status(403).json({ error: "Tenant context required" });
+  }
+
   const { complexId } = GetComplexParams.parse(req.params);
-  const [complex] = await db.select().from(complexesTable).where(eq(complexesTable.id, complexId));
+  const [complex] = await db
+    .select()
+    .from(complexesTable)
+    .where(and(eq(complexesTable.id, complexId), eq(complexesTable.tenantId, currentUser.tenantId)));
   if (!complex) {
     return res.status(404).json({ error: "Complex not found" });
   }
@@ -58,9 +83,18 @@ router.get("/:complexId", async (req, res) => {
 });
 
 router.put("/:complexId", async (req, res) => {
+  const currentUser = res.locals.currentUser as { tenantId?: number | null } | undefined;
+  if (!currentUser?.tenantId) {
+    return res.status(403).json({ error: "Tenant context required" });
+  }
+
   const { complexId } = GetComplexParams.parse(req.params);
   const body = UpdateComplexBody.parse(req.body);
-  const [complex] = await db.update(complexesTable).set(body).where(eq(complexesTable.id, complexId)).returning();
+  const [complex] = await db
+    .update(complexesTable)
+    .set(body)
+    .where(and(eq(complexesTable.id, complexId), eq(complexesTable.tenantId, currentUser.tenantId)))
+    .returning();
   if (!complex) {
     return res.status(404).json({ error: "Complex not found" });
   }
@@ -68,13 +102,34 @@ router.put("/:complexId", async (req, res) => {
 });
 
 router.delete("/:complexId", async (req, res) => {
+  const currentUser = res.locals.currentUser as { tenantId?: number | null } | undefined;
+  if (!currentUser?.tenantId) {
+    return res.status(403).json({ error: "Tenant context required" });
+  }
+
   const { complexId } = DeleteComplexParams.parse(req.params);
-  await db.delete(complexesTable).where(eq(complexesTable.id, complexId));
+  await db
+    .delete(complexesTable)
+    .where(and(eq(complexesTable.id, complexId), eq(complexesTable.tenantId, currentUser.tenantId)));
   return res.status(204).send();
 });
 
 router.get("/:complexId/stats", async (req, res) => {
+  const currentUser = res.locals.currentUser as { tenantId?: number | null } | undefined;
+  if (!currentUser?.tenantId) {
+    return res.status(403).json({ error: "Tenant context required" });
+  }
+
   const { complexId } = GetComplexStatsParams.parse(req.params);
+
+  const [complex] = await db
+    .select({ id: complexesTable.id })
+    .from(complexesTable)
+    .where(and(eq(complexesTable.id, complexId), eq(complexesTable.tenantId, currentUser.tenantId)));
+
+  if (!complex) {
+    return res.status(404).json({ error: "Complex not found" });
+  }
 
   const units = await db.select().from(unitsTable).where(eq(unitsTable.complexId, complexId));
   const totalUnits = units.length;

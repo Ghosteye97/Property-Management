@@ -654,6 +654,22 @@ components:
         status:
           type: string
           enum: [Occupied, Vacant, Under Maintenance]
+        primaryUse:
+          type: string
+        ownershipStartDate:
+          type: string
+        correspondencePreference:
+          type: string
+        correspondenceAddress:
+          type: string
+        participationQuota:
+          type: number
+        parkingBay:
+          type: string
+        storeroomNumber:
+          type: string
+        utilityMeterNumber:
+          type: string
         ownerName:
           type: string
         ownerEmail:
@@ -665,6 +681,14 @@ components:
         tenantEmail:
           type: string
         tenantPhone:
+          type: string
+        isTrustee:
+          type: boolean
+        trusteeRole:
+          type: string
+        trusteeStartDate:
+          type: string
+        trusteeNotes:
           type: string
         monthlyLevy:
           type: number
@@ -689,6 +713,22 @@ components:
         status:
           type: string
           enum: [Occupied, Vacant, Under Maintenance]
+        primaryUse:
+          type: string
+        ownershipStartDate:
+          type: string
+        correspondencePreference:
+          type: string
+        correspondenceAddress:
+          type: string
+        participationQuota:
+          type: number
+        parkingBay:
+          type: string
+        storeroomNumber:
+          type: string
+        utilityMeterNumber:
+          type: string
         ownerName:
           type: string
         ownerEmail:
@@ -700,6 +740,14 @@ components:
         tenantEmail:
           type: string
         tenantPhone:
+          type: string
+        isTrustee:
+          type: boolean
+        trusteeRole:
+          type: string
+        trusteeStartDate:
+          type: string
+        trusteeNotes:
           type: string
         monthlyLevy:
           type: number
